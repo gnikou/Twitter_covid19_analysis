@@ -4,7 +4,7 @@ from extra import *
 from collections import defaultdict
 import pymongo
 from dateutil import parser
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 tokenizer = AutoTokenizer.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")
 model = AutoModelForSequenceClassification.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")

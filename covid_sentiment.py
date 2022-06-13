@@ -174,7 +174,7 @@ def main():
     end_date = parser.parse("2020-02-22")
 
     while cur_date <= end_date:
-        helper(db, collection, start_date, start_date + timedelta(days=1))
+        helper(db, collection, cur_date, cur_date + timedelta(days=1))
         cur_date += timedelta(days=1)
     # helper(db, collection, start_date, end_date)
 

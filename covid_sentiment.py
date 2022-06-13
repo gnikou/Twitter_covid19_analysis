@@ -1,13 +1,10 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-import utils
-import re
+from extra import *
+
 from collections import defaultdict
 import pymongo
 from dateutil import parser
 from datetime import datetime, timedelta
-# from os import listdir
-# from os.path import isfile, join
-# import ast
 
 tokenizer = AutoTokenizer.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")
 model = AutoModelForSequenceClassification.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")
@@ -15,83 +12,7 @@ classifier = pipeline("zero-shot-classification",
                       model="vicgalle/xlm-roberta-large-xnli-anli", device=0)
 
 
-# extract text field of twitter object
-def get_text(tweet):
-    if "extended_tweet" in tweet.keys() and "full_text" in tweet["extended_tweet"].keys():
-        # case of extended tweet object
-        return tweet['extended_tweet']['full_text']
-    elif "retweeted_status" in tweet.keys() and "extended_tweet" in tweet["retweeted_status"].keys() and "full_text" \
-            in tweet["retweeted_status"]["extended_tweet"].keys():
-        # case of retweet object with extednded status
-        return tweet['retweeted_status']['extended_tweet']['full_text']
-    elif "retweeted_status" in tweet.keys() and "full_text" in tweet["retweeted_status"].keys():
-        # case of retweetedd object with full_text
-        return tweet['retweeted_status']['full_text']
-    elif "retweeted_status" in tweet.keys():
-        tweet_text = tweet["full_text"] if "full_text" in tweet else tweet["text"]
-        tweet_text = utils.merge_tw_rt(tweet_text,
-                                       tweet["retweeted_status"]["full_text"] if "full_text" in
-                                                                                 tweet["retweeted_status"] else
-                                       tweet["retweeted_status"]["text"])
-        return tweet_text
-    elif "full_text" in tweet.keys():
-        # tweet object with full_text
-        return tweet['full_text']
-    elif "text" in tweet.keys():
-        # case of simple text field in tweet object
-        return tweet['text']
-    return None
-
-
-def remove_url(text):
-    return re.sub(r"http\S+", "", text)
-
-
-def text_cleanup(tweet_text):
-    clean_tweet_text = remove_url(tweet_text)
-    clean_tweet_text = re.sub('[@#]', '', clean_tweet_text)
-    return clean_tweet_text
-
-
-def legit_length(text):
-    text.replace("  ", " ")
-    words = [word for word in text.split(" ") if len(word) >= 1 and word[0] != "@"]
-    score = len(words) / len("".join(words)) if len("".join(words)) != 0 else 0.0
-    if 0.0 < score < 1.0:
-        return True
-    return False
-
-
-def remove_rt(text):
-    while len(text) > 3 and (text[:3] == "RT " or text[0] == "@"):
-        if not legit_length(text):
-            return None
-        if "RT " == text[:3]:
-            if ":" in text:
-                text = text[text.index(":") + 2:]
-            else:
-                text = text[3:]
-        if not legit_length(text):
-            return None
-        # in case when first word is mention, remove it
-        if len(text) > 2 and text[0] == "@":
-            if " " in text:
-                text = text[text.index(" ") + 1:]
-            elif "\t" in text:
-                text = text[text.index("\t") + 1:]
-            elif "\n" in text:
-                text = text[text.index("\n") + 1:]
-            else:
-                return None
-    if legit_length(text):
-        text = text_cleanup(text)
-        if legit_length(text):
-            return text
-
-    return None
-
-
-def helper(db, collection, start_date, end_date):
+def helper(db, start_date, end_date):
     ids = set()
     tweet_texts = defaultdict(lambda: "")
     tweet_multi = defaultdict(lambda: 1)

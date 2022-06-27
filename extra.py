@@ -4,11 +4,12 @@ import re
 Remove emojis from text. List of emojis and clear text is returned
 """
 
+
 def remove_url(text):
     text = re.sub(
         r'''(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))''',
         " ", text)
-    return "", text
+    return text
     regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
     url = [x[0] for x in re.findall(regex, text)]
     for link in url:
@@ -16,22 +17,29 @@ def remove_url(text):
 
     return text
 
+
 """
 remove double spaces from text
 """
+
+
 def remove_double_space(text):
     while "  " in text:
         text = text.replace("  ", " ")
     return text
 
+
 """
 Filter the tweet text from non-necessary characters 
 """
+
+
 def fix_dots(text):
     text = text.replace("\\n", " ").replace("…", " ").replace("...", " ")
     text = re.sub('[\n\t:]', ' ', text)
 
     return remove_double_space(text)
+
 
 def text_cleanup(tweet_text):
     clean_tweet_text = remove_url(tweet_text)
@@ -51,7 +59,6 @@ def legit_length(text):
 
 
 def remove_rt(text):
-
     """Remove multiple RT's in text start"""
     while text.startswith("RT"):
         text = text[2:]
@@ -63,6 +70,7 @@ def remove_rt(text):
         if legit_length(text):
             return text
     return None
+
 
 # extract text field of twitter object
 def get_text(tweet):
@@ -79,9 +87,9 @@ def get_text(tweet):
     elif "retweeted_status" in tweet.keys():
         tweet_text = tweet["full_text"] if "full_text" in tweet else tweet["text"]
         tweet_text = merge_tw_rt(tweet_text,
-                                       tweet["retweeted_status"]["full_text"] if "full_text" in
-                                                                                 tweet["retweeted_status"] else
-                                       tweet["retweeted_status"]["text"])
+                                 tweet["retweeted_status"]["full_text"] if "full_text" in
+                                                                           tweet["retweeted_status"] else
+                                 tweet["retweeted_status"]["text"])
         return tweet_text
     elif "full_text" in tweet.keys():
         # tweet object with full_text
@@ -91,9 +99,12 @@ def get_text(tweet):
         return tweet['text']
     return None
 
+
 """
 Merge the original tweet text and retweet from Twitter object, in order to get full text in case if it possibl
 """
+
+
 def merge_tw_rt(tweet_text, retweet_text):
     if ": " not in tweet_text:
         print("Tweet:->{}\nRetweet:->{}\n\n".format(tweet_text, retweet_text))
@@ -110,8 +121,8 @@ def merge_tw_rt(tweet_text, retweet_text):
             start_ind_tw = ind
     else:
         for i in range(ind, len(tweet_text) - 6):
-            if tweet_text[i:i+6] in retweet_text:
-                start_ind_rt = retweet_text.index(tweet_text[i:i+6])
+            if tweet_text[i:i + 6] in retweet_text:
+                start_ind_rt = retweet_text.index(tweet_text[i:i + 6])
                 start_ind_tw = i
                 break
     if start_ind_tw != None:

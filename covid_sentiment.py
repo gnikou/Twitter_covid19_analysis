@@ -6,6 +6,7 @@ import pymongo
 from dateutil import parser
 from datetime import timedelta
 from pathlib import Path
+import pandas as pd
 
 tokenizer = AutoTokenizer.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")
 model = AutoModelForSequenceClassification.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")
@@ -20,7 +21,6 @@ def helper(db, start_date, end_date):
 
     for tweet in db.tweets.find(
             {"created_at": {"$gte": start_date, "$lt": end_date}, "retweeted_status": {"$exists": False}}):
-
         tweet_text = remove_rt(remove_url(get_text(tweet)))
         if tweet_text is None or len(
                 tweet_text) < 3 or " " not in tweet_text or "account is temporarily unavailable because it violates the Twitter Media Policy. Learn more." in tweet_text or "account has been withheld in " in tweet_text:
@@ -30,7 +30,6 @@ def helper(db, start_date, end_date):
 
     for tweet in db.tweets.find(
             {"created_at": {"$gte": start_date, "$lt": end_date}, "retweeted_status": {"$exists": True}}):
-
         rt_text = remove_rt(remove_url(get_text(tweet)))
         if rt_text is None or len(rt_text) < 3 or " " not in rt_text:
             continue
@@ -46,17 +45,11 @@ def helper(db, start_date, end_date):
             """case when we dont have the original tweet text, so we keep id and text for analysis"""
             ids.add(tweet["retweeted_status"]["id"])
             tweet_texts[tweet["retweeted_status"]["id"]] = rt_text
-        ''' 
-        elif "account is temporarily unavailable because it violates the Twitter Media Policy. Learn more." not in rt_text and "account has been withheld in " not in rt_text:
-            """case when we have the original tweet but text is different, need to store both for further analysis"""
-            print("{}\n{}\n{}\n----------------------".format(
-                tweet_texts[tweet["retweeted_status"]["id"]],
-                tweet["retweeted_status"]["id"], rt_text))
-        '''
+
     ids_list = []
     all_tweets = 0
     for tw_id in ids:
-        tweet_text_list.append(tweet_texts[tw_id])
+        tweet_text_list.append(replace_labels(tweet_texts[tw_id]))
         ids_list.append(tw_id)
         all_tweets += tweet_multi[tw_id]
     print(f"Number of all tweets: {all_tweets}")
@@ -64,31 +57,58 @@ def helper(db, start_date, end_date):
 
 
 def sent_classifier(tweet_text_list, tweet_multi, all_tweets, ids_list, start_date):
-    sentiment_labels = ['positive for covid19', 'negative for covid19',
-                        'positive for coronavirus', 'negative for coronavirus',
+    sentiment_labels = ['positive for covid', 'negative for covid',
                         'positive for lockdown', 'negative for lockdown',
-                        'positive for pandemic', 'negative for pandemic',
+                        'positive for vaccine', 'negative for vaccine',
+                        'positive for conspiracy', 'negative for vaccine',
+                        'positive for masks', 'negative for masks',
+                        'positive for cases', 'negative for cases',
+                        'positive for deaths', 'negative for deaths'
                         ]
     sentiment = classifier(tweet_text_list, sentiment_labels, batch_size=16, gradient_accumulation_steps=4,
                            gradient_checkpointing=True, fp16=True, optim="adafactor")
 
     sent_scores = collections.defaultdict(lambda: 0.0)
 
-    data = "{}-{}-{}".format(start_date.year, start_date.month, start_date.day)
-
-    ids_file = open("sentiment_by_id_day_{}.csv".format(data), "w+")
-    list_ids = ""
-
     for item in range(len(sentiment)):
-        list_ids += f"\n{ids_list[item]}: "
         for ind in range(len(sentiment[item]['labels'])):
             label = sentiment[item]['labels'][ind].replace(" ", "_")
             sent_scores[label] += (sentiment[item]['scores'][ind] * tweet_multi[ids_list[item]])
-            list_ids += f"[{label}] : {sentiment[item]['scores'][ind]:.3f}, "
 
+    data = "{}-{}-{}".format(start_date.year, start_date.month, start_date.day)
+
+    writef_id_sentiment(data, ids_list, sentiment, sentiment_labels)
+    writef_sentiment(all_tweets, data, sentiment_labels, sent_scores)
+
+
+def replace_labels(original_text):
+    text = original_text.lower()
+    text = text.replace("covid19", "covid")
+    text = text.replace("coronavirus", "covid")
+    text = text.replace("pandemic", "covid")
+    text = text.replace("covid-19", "covid")
+    text = text.replace("isolation", "lockdown")
+    text = text.replace("vaccination", "vaccine")
+    text = text.replace("propaganda", "conspiracy")
+    return text
+
+
+def writef_id_sentiment(data, ids_list, sentiment, sentiment_labels):
+    ids_file = open("sentiment_by_id_day_{}.csv".format(data), "w+")
+    list_ids = ""
+    list_ids += "tweet_id\t" + '\t'.join(sentiment_labels)
+    # list_ids += '\t'.join(sentiment_labels)
+
+    for item in range(len(sentiment)):
+        list_ids += f"\n{ids_list[item]}\t"
+        for label in sentiment_labels:
+            index = sentiment[item]['labels'].index(label)
+            list_ids += f"{sentiment[item]['scores'][index]:.3f}\t"
     ids_file.write(list_ids)
     ids_file.close()
 
+
+def writef_sentiment(all_tweets, data, sentiment_labels, sent_scores):
     my_file = Path("/home/gnikou/twitter_covid_sentiment.csv")
 
     if my_file.is_file():
@@ -109,17 +129,29 @@ def sent_classifier(tweet_text_list, tweet_multi, all_tweets, ids_list, start_da
     file_out.close()
 
 
+def set_start_date():
+    fname = "twitter_covid_sentiment.csv"
+    try:
+        df = pd.read_csv(fname, sep='\t')
+    except OSError:
+        return parser.parse("2020-02-18")
+
+    # returns last written day
+    return parser.parse(df["day"].tail(1).item())
+
+
 def main():
     client = pymongo.MongoClient("mongodb://localhost:27027/")
     db = client['covidTweetsDB']
-    collection = db['tweets']
-    start_date = parser.parse("2020-02-19")
+
+    start_date = set_start_date() + timedelta(days=1)
     cur_date = start_date
-    end_date = parser.parse("2020-02-21")
+    end_date = start_date + timedelta(days=2)
 
     while cur_date <= end_date:
         helper(db, cur_date, cur_date + timedelta(days=1))
         cur_date += timedelta(days=1)
+
     client.close()
 
 

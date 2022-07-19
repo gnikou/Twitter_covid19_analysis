@@ -26,7 +26,7 @@ class JsonParser:
 
     def get_files_range(self):
         nmbr_range = []
-        for file in os.path(DATA_PATH):
+        for file in os.listdir(DATA_PATH):
             if file.startswith("ht_"):
                 nmbr_range.append(int(file.split("_")[2].split(".")[0]))
         if len(nmbr_range) == 0:
@@ -114,10 +114,11 @@ class JsonParser:
 
 
     def main(self):
+        self.get_known_tweetIDS()
         print(f"Number of initial tweets (DB): {len(self.tweet_ids)}\n")
         end_point, start_point = self.get_files_range()
 
-        if end_point == 0 or end_point <= start_point:
+        if end_point == 0 or end_point < start_point:
             return
 
         for fileIndex in range(start_point, end_point+1):

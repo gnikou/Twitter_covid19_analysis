@@ -80,22 +80,14 @@ class JsonParser:
                 ("account is temporarily unavailable because it violates the Twitter Media Policy. Learn more." in text)
                     or "account has been withheld in " in text):
                 continue
-            original_text = ""
-            if "extended_tweet" in tweet and "full_text" in tweet["extended_tweet"]:
-                original_text =  tweet["extended_tweet"]["full_text"]
-            elif "full_text" in tweet:
-                original_text =  tweet["full_text"]
-            else:
-                original_text =  tweet["text"]
+            
             new_tweet = {"id": int(tweet["id"]),
                          "text": text,
-                         "original_text": original_text,
                          "user_id": int(tweet["user"]["id"]),
                          "created_at": parser.parse(tweet["created_at"]) if type(tweet["created_at"]) == str else tweet["created_at"],
                          "hashtags": self.get_hashtags(tweet)}
             if"retweeted_status" in tweet:
-                new_tweet["retweeted_status"] = {"id": tweet["retweeted_status"]["id"], "text": tweet["retweeted_status"]["full_text"] if "full_text" in
-                                                                                                   tweet["retweeted_status"] else tweet["retweeted_status"]["text"]}
+                new_tweet["retweeted_status"] = {"id": tweet["retweeted_status"]["id"] }
 
             tweets_to_insert.append(new_tweet)
             counter += 1

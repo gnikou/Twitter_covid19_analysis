@@ -5,16 +5,22 @@ Remove emojis from text. List of emojis and clear text is returned
 """
 
 
-def remove_url(text):
+def remove_url(tweet, text):
+    #text = re.sub(
+    #    r'''(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))''',
+    #    " ", text)
+    #return text
+    #regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    #url = [x[0] for x in re.findall(regex, text)]
+    #for link in url:
+    #    text = text.replace(link, " ")
+
+    
+    for url in get_urls(tweet):
+        text = text.replace(url, ' ')
     text = re.sub(
         r'''(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))''',
         " ", text)
-    return text
-    regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
-    url = [x[0] for x in re.findall(regex, text)]
-    for link in url:
-        text = text.replace(link, " ")
-
     return text
 
 
@@ -42,8 +48,7 @@ def fix_dots(text):
 
 
 def text_cleanup(tweet_text):
-    clean_tweet_text = remove_url(tweet_text)
-    clean_tweet_text = re.sub('[@#]', '', clean_tweet_text)
+    clean_tweet_text = re.sub('[@#]', '', tweet_text)
     clean_tweet_text = fix_dots(clean_tweet_text)
 
     return clean_tweet_text
@@ -71,9 +76,23 @@ def remove_rt(text):
             return text
     return None
 
+def get_urls(tweet):
+    urls = set([])
+    tweet_portion = []
+    if "extended_tweet" in tweet and "entities" in tweet["extended_tweet"]:
+        tweet_portion = tweet["extended_tweet"]["entities"]["urls"]
+    else:
+        tweet_portion = tweet["entities"]["urls"]
+    for pair in tweet_portion:
+        urls.add(pair["url"])
+    if "retweeted_status" in tweet:
+        return  urls.union(get_urls(tweet["retweeted_status"]))
+    return urls
+
 
 # extract text field of twitter object
 def get_text(tweet):
+    
     if "extended_tweet" in tweet.keys() and "full_text" in tweet["extended_tweet"].keys():
         # case of extended tweet object
         return tweet['extended_tweet']['full_text']
@@ -86,7 +105,7 @@ def get_text(tweet):
         return tweet['retweeted_status']['full_text']
     elif "retweeted_status" in tweet.keys():
         tweet_text = tweet["full_text"] if "full_text" in tweet else tweet["text"]
-        tweet_text = merge_tw_rt(tweet_text,
+        tweet_text = merge_tw_rt(tweet, tweet_text,
                                  tweet["retweeted_status"]["full_text"] if "full_text" in
                                                                            tweet["retweeted_status"] else
                                  tweet["retweeted_status"]["text"])
@@ -105,9 +124,9 @@ Merge the original tweet text and retweet from Twitter object, in order to get f
 """
 
 
-def merge_tw_rt(tweet_text, retweet_text):
-    tweet_text = remove_url(tweet_text)
-    retweet_text = remove_url(retweet_text)
+def merge_tw_rt(tweet, tweet_text, retweet_text):
+    tweet_text = remove_url(tweet, tweet_text)
+    retweet_text = remove_url(tweet, retweet_text)
 
     while tweet_text.startswith("RT"):
         ind = tweet_text.index(":") + 1 if ":" in tweet_text else tweet_text.index("RT") + 2

@@ -108,7 +108,8 @@ class JsonParser:
                          "text": text,
                          "user_id": int(tweet["user"]["id"]),
                          "created_at": tweet["created_at"],
-                         "hashtags": self.get_hashtags(tweet)}
+                         "hashtags": self.get_hashtags(tweet), 
+                         "lang": tweet["lang"]}
             if"retweeted_status" in tweet:
                 new_tweet["retweeted_status"] = {"id": tweet["retweeted_status"]["id"] }
             

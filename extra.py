@@ -107,7 +107,7 @@ Merge the original tweet text and retweet from Twitter object, in order to get f
 
 def merge_tw_rt(tweet_text, retweet_text):
     if ": " not in tweet_text:
-        print("Tweet:->{}\nRetweet:->{}\n\n".format(tweet_text, retweet_text))
+        # print("Tweet:->{}\nRetweet:->{}\n\n".format(tweet_text, retweet_text))
         ind = 0
     else:
         ind = tweet_text.index(": ") + 2

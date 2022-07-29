@@ -7,6 +7,7 @@ from dateutil import parser
 from datetime import timedelta
 from pathlib import Path
 import pandas as pd
+import sys
 
 tokenizer = AutoTokenizer.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")
 model = AutoModelForSequenceClassification.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")
@@ -60,10 +61,12 @@ def sent_classifier(tweet_text_list, tweet_multi, all_tweets, ids_list, start_da
     sentiment_labels = ['positive for covid', 'negative for covid',
                         'positive for lockdown', 'negative for lockdown',
                         'positive for vaccine', 'negative for vaccine',
-                        'positive for conspiracy', 'negative for vaccine',
+                        'positive for conspiracy', 'negative for conspiracy',
                         'positive for masks', 'negative for masks',
                         'positive for cases', 'negative for cases',
-                        'positive for deaths', 'negative for deaths'
+                        'positive for deaths', 'negative for deaths',
+                        'positive for propaganda', 'negative for propaganda',
+                        'positive for 5G', 'negative for 5G',
                         ]
     sentiment = classifier(tweet_text_list, sentiment_labels, batch_size=16, gradient_accumulation_steps=4,
                            gradient_checkpointing=True, fp16=True, optim="adafactor")
@@ -89,7 +92,11 @@ def replace_labels(original_text):
     text = text.replace("covid-19", "covid")
     text = text.replace("isolation", "lockdown")
     text = text.replace("vaccination", "vaccine")
-    text = text.replace("propaganda", "conspiracy")
+    text = text.replace("pfizer", "vaccine")
+    text = text.replace("pfizer-biontech", "vaccine")
+    text = text.replace("moderna", "vaccine")
+    text = text.replace("johnson & johnson", "vaccine")
+    text = text.replace("j&j", "vaccine")
     return text
 
 
@@ -97,7 +104,6 @@ def writef_id_sentiment(data, ids_list, sentiment, sentiment_labels):
     ids_file = open("sentiment_by_id_day_{}.csv".format(data), "w+")
     list_ids = ""
     list_ids += "tweet_id\t" + '\t'.join(sentiment_labels)
-    # list_ids += '\t'.join(sentiment_labels)
 
     for item in range(len(sentiment)):
         list_ids += f"\n{ids_list[item]}\t"
@@ -146,9 +152,11 @@ def main():
 
     start_date = set_start_date() + timedelta(days=1)
     cur_date = start_date
-    end_date = start_date + timedelta(days=2)
+    num_of_days = int(sys.argv[1]) - 1
+    end_date = start_date + timedelta(days=num_of_days)
+    lastDay = parser.parse("2020-03-15")
 
-    while cur_date <= end_date:
+    while cur_date <= end_date and cur_date <= lastDay:
         helper(db, cur_date, cur_date + timedelta(days=1))
         cur_date += timedelta(days=1)
 

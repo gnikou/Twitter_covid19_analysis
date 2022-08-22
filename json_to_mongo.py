@@ -92,13 +92,11 @@ def main():
 
 
 if __name__ == '__main__':
-    tweet_ids = set()
+    
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     db = client['covidTweetsDB']
     collection = db['tweets']
-    ids_list = collection.find({}, {"_id": 0, "id": 1})
-
-    for j in ids_list:
-        tweet_ids.add(j["id"])
-
+    
+    tweet_ids = set([item["id"] for item in  collection.find({}, {"_id": 0, "id": 1})])
+    
     main()

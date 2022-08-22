@@ -6,7 +6,7 @@ import shutil
 import os
 
 
-def read_json(file, collection):
+def read_json(file):
     with open(file, 'r') as inp:
         tweets_dict = []
         num_of_tweets = 0
@@ -25,10 +25,10 @@ def read_json(file, collection):
 
             # Insert tweets into db for every 10000 tweets
             if len(tweets_dict) == 10000:
-                insert_tweets(collection, tweets_dict)
+                insert_tweets(tweets_dict)
                 del tweets_dict[:]
 
-    insert_tweets(collection, tweets_dict)
+    insert_tweets(tweets_dict)
     return num_of_tweets
 
 
@@ -45,19 +45,19 @@ def parse_date(tweets_dict):
     return tweets_dict
 
 
-def insert_tweets(collection, tweets_to_mongo):
+def insert_tweets(tweets_to_mongo):
     collection.insert_many(tweets_to_mongo)
 
 
-def index_creation(collection):
+def index_creation():
     collection.create_index([('created_at', 1)])
 
 
-def helper(collection, comp_file, file):
+def helper(comp_file, file):
     with gzip.open(comp_file, 'rb') as f_in:
         with open(file, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
-    num = read_json(file, collection)
+    num = read_json(file)
     os.remove(file)
     return num
 
@@ -69,31 +69,36 @@ def print_stats(file, num, num_of_tweets):
 
 
 def main():
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    db = client['covidTweetsDB']
-    collection = db['tweets']
     num_of_tweets = 0
     print("Number of unique tweets: {}".format(len(tweet_ids)))
 
     for i in reversed(range(1, 11)):
         comp_file = 'ht_coronavirus_' + str(i) + '.gz'
         file = 'ht_coronavirus_' + str(i) + '.json'
-        num = helper(collection, comp_file, file)
+        num = helper(comp_file, file)
         num_of_tweets += num
         print_stats(file, num, num_of_tweets)
 
         comp_file = 'ht_COVID19_' + str(i) + '.gz'
         file = 'ht_COVID19_' + str(i) + '.json'
-        num = helper(collection, comp_file, file)
+        num = helper(comp_file, file)
         num_of_tweets += num
         print_stats(file, num, num_of_tweets)
 
     print('=======================================')
     print("Total Number of tweets: {}".format(num_of_tweets))
     print("Total Number of unique tweets: {}".format(len(tweet_ids)))
-    index_creation(collection)
+    index_creation()
 
 
 if __name__ == '__main__':
     tweet_ids = set()
+    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    db = client['covidTweetsDB']
+    collection = db['tweets']
+    ids_list = collection.find({}, {"_id": 0, "id": 1})
+
+    for j in ids_list:
+        tweet_ids.add(j["id"])
+
     main()

@@ -19,6 +19,7 @@ def plot_positive_sentiment(filename):
     plt.ylabel('Sentiment score')
     fig.autofmt_xdate()
     fig.set_size_inches((20.92, 11.77), forward=False)
+    plt.margins(x=0)
     plt.savefig('positive-sentiment-plot.png', dpi=500)
     # plt.show()
 
@@ -41,6 +42,7 @@ def plot_negative_sentiment(filename):
     plt.ylabel('Sentiment score')
     fig.autofmt_xdate()
     fig.set_size_inches((20.92, 11.77), forward=False)
+    plt.margins(x=0)
     plt.savefig('negative-sentiment-plot.png', dpi=500)
     # plt.show()
 

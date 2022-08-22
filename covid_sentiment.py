@@ -121,7 +121,7 @@ def writef_sentiment(all_tweets, data, sentiment_labels, sent_scores):
         file_out = open("twitter_covid_sentiment.csv", "a+")
         for label in sentiment_labels:
             label = label.replace(" ", "_")
-            data += "\t{}".format((sent_scores[label] / all_tweets) * 100 if all_tweets != 0 else 0.0)
+            data += "\t{}".format((sent_scores[label] / all_tweets) if all_tweets != 0 else 0.0)
         file_out.write("{}\n".format(data))
 
     else:
@@ -130,7 +130,7 @@ def writef_sentiment(all_tweets, data, sentiment_labels, sent_scores):
         for label in sentiment_labels:
             label = label.replace(" ", "_")
             header += "\t" + label
-            data += "\t{}".format((sent_scores[label] / all_tweets) * 100 if all_tweets != 0 else 0.0)
+            data += "\t{}".format((sent_scores[label] / all_tweets) if all_tweets != 0 else 0.0)
         file_out.write("{}\n{}\n".format(header, data))
     file_out.close()
 

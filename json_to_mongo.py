@@ -28,7 +28,10 @@ def read_json(file):
                 insert_tweets(tweets_dict)
                 del tweets_dict[:]
 
-    insert_tweets(tweets_dict)
+    if tweets_dict:
+        insert_tweets(tweets_dict)
+        del tweets_dict[:]
+
     return num_of_tweets
 
 
@@ -62,43 +65,38 @@ def helper(comp_file, file):
     return num
 
 
-def print_stats(file, num, num_of_tweets):
-    print("{}\n------------------\nNumber of tweets(file): {}".format(file, num))
-    print("Total Number of tweets: {}".format(num_of_tweets))
-    print("Total Number of unique tweets: {}".format(len(tweet_ids)))
+def print_stats(file, num, prev):
+    print(f"\n================================\n{file}\nNumber of tweets(file): {num}")
+    print(f"Number of tweets added: {len(tweet_ids) - prev}")
+    print(f"Total Number of tweets: {len(tweet_ids)}")
 
 
 def main():
-    num_of_tweets = 0
-    print("Number of unique tweets: {}".format(len(tweet_ids)))
+    print(f"Number of initial tweets (DB): {len(tweet_ids)}\n")
 
-    for i in reversed(range(1, 11)):
+    for i in range(2, 5):
         comp_file = 'ht_coronavirus_' + str(i) + '.gz'
         file = 'ht_coronavirus_' + str(i) + '.json'
+        prev = len(tweet_ids)
         num = helper(comp_file, file)
-        num_of_tweets += num
-        print_stats(file, num, num_of_tweets)
+        print_stats(file, num, prev)
 
         comp_file = 'ht_COVID19_' + str(i) + '.gz'
         file = 'ht_COVID19_' + str(i) + '.json'
+        prev = len(tweet_ids)
         num = helper(comp_file, file)
-        num_of_tweets += num
-        print_stats(file, num, num_of_tweets)
+        print_stats(file, num, prev)
 
     print('=======================================')
-    print("Total Number of tweets: {}".format(num_of_tweets))
-    print("Total Number of unique tweets: {}".format(len(tweet_ids)))
+    print(f"Total Number of tweets (DB): {len(tweet_ids)}")
     index_creation()
 
 
 if __name__ == '__main__':
-    tweet_ids = set()
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     db = client['covidTweetsDB']
     collection = db['tweets']
-    ids_list = collection.find({}, {"_id": 0, "id": 1})
 
-    for j in ids_list:
-        tweet_ids.add(j["id"])
+    tweet_ids = set([item["id"] for item in collection.find({}, {"_id": 0, "id": 1})])
 
     main()

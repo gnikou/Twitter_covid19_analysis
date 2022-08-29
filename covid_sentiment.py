@@ -53,7 +53,8 @@ def helper(db, start_date, end_date):
         tweet_text_list.append(replace_labels(tweet_texts[tw_id]))
         ids_list.append(tw_id)
         all_tweets += tweet_multi[tw_id]
-    print(f"Number of all tweets: {all_tweets}")
+
+    print(f"Day: {start_date} Number of tweets: {all_tweets}")
     sent_classifier(tweet_text_list, tweet_multi, all_tweets, ids_list, start_date)
 
 
@@ -154,9 +155,8 @@ def main():
     cur_date = start_date
     num_of_days = int(sys.argv[1]) - 1
     end_date = start_date + timedelta(days=num_of_days)
-    lastDay = parser.parse("2020-03-15")
 
-    while cur_date <= end_date and cur_date <= lastDay:
+    while cur_date <= end_date:
         helper(db, cur_date, cur_date + timedelta(days=1))
         cur_date += timedelta(days=1)
 

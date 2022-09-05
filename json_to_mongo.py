@@ -4,99 +4,122 @@ from dateutil import parser
 import gzip
 import shutil
 import os
+from extra import *
+from mongoConfig import mongoConfig
+
+DATA_PATH = "data/"
 
 
-def read_json(file):
-    with open(file, 'r') as inp:
-        tweets_dict = []
-        num_of_tweets = 0
-        for line in nonblank_lines(inp):
-            num_of_tweets += 1
 
-            try:
-                tweet = json.loads(line)
-                if tweet['id'] not in tweet_ids:
-                    tweet_ids.add(tweet['id'])
-                    tweets_dict.append(parse_date(tweet))
-            except ValueError:
-                print('Decoding JSON has failed - value error')
-            except TypeError:
-                print('Decoding JSON has failed - type error')
+class JsonParser:
+    def __init__(self):
+        self.client = pymongo.MongoClient(mongoConfig["address"])
+        self.db = self.client[mongoConfig["db"]]
+        self.collection = self.db[mongoConfig["collection"]]
 
-            # Insert tweets into db for every 10000 tweets
-            if len(tweets_dict) == 10000:
-                insert_tweets(tweets_dict)
-                del tweets_dict[:]
+        self.tweet_ids = None
 
-    if tweets_dict:
-        insert_tweets(tweets_dict)
-        del tweets_dict[:]
-
-    return num_of_tweets
+    """Get tweet IDS that are already is in MongoDB"""
+    def get_known_tweetIDS(self):
+        self.tweet_ids = set([item["id"] for item in self.collection.find({}, {"_id": 0, "id": 1})])
 
 
-def nonblank_lines(f):
-    for x in f:
-        line = x.rstrip()
-        if line:
-            yield line
+    def get_files_range(self):
+        nmbr_range = []
+        for file in os.path(DATA_PATH):
+            if file.startswith("ht_"):
+                nmbr_range.append(int(file.split("_")[2].split(".")[0]))
+        if len(nmbr_range) == 0:
+            return 0, 0
+        return max(nmbr_range), min(nmbr_range)
+
+    def get_hashtags(self, tweet):
+        hashtags = set()
+        if "extended_tweet" in tweet:
+            for ht in tweet['entities']['hashtags']:
+                hashtags.add(ht['text'])
+
+        elif "entities" in tweet:
+            for ht in tweet['entities']['hashtags']:
+                hashtags.add(ht['text'])
+
+        if "retweeted_status" in tweet:
+            if "extended_tweet" in tweet["retweeted_status"]:
+                if tweet["retweeted_status"]["extended_tweet"]['entities']['hashtags'] in tweet:
+                    for ht in tweet["retweeted_status"]["extended_tweet"]['entities']['hashtags']:
+                        hashtags.add(ht['text'])
+
+            elif 'entities' in tweet["retweeted_status"]:
+                for ht in tweet['retweeted_status']['entities']['hashtags']:
+                    hashtags.add(ht['text'])
+        return list(hashtags)
 
 
-def parse_date(tweets_dict):
-    tweets_dict['created_at'] = parser.parse(tweets_dict['created_at'])
+    def file_parse(self, filename):
+        """Open compresed file and read line-by-line"""
+        print(f'Parsing file: {filename}')
+        if not os.path.exists(DATA_PATH + filename):
+            print(f'\tSkip, file not exists')
+            return 0
+        fstream = gzip.open(DATA_PATH + filename, 'r')
+        tweets_to_insert = []
+        counter = 0
+        while True:
+            line = fstream.readline()
+            if not line:
+                break
+            tweet = json.loads(line)
 
-    return tweets_dict
+            """Check if tweet is not already in database"""
+            if int(tweet["id"]) in self.tweet_ids:
+                continue
+
+            text = remove_rt(remove_url(get_text(tweet))).strip()
+
+            if (text is None or len(text) < 3 or
+                ("account is temporarily unavailable because it violates the Twitter Media Policy. Learn more." in text)
+                    or "account has been withheld in " in text):
+                continue
+            new_tweet = {"id": int(tweet["id"]),
+                         "text": text,
+                         "user_id": int(tweet["user"]["id"]),
+                         "created_at": parser.parse(tweet["created_at"]) if type(tweet["created_at"]) == str else tweet["created_at"],
+                         "hashtags": self.get_hashtags(tweet)}
+            if"retweeted_status" in tweet:
+                new_tweet["retweeted_status"] = {"id": tweet["retweeted_status"]["id"]}
+
+            tweets_to_insert.append(new_tweet)
+            counter += 1
+
+            self.tweet_ids.add(int(tweet["id"]))
+
+            """If they are to many tweets ready to insert, push them into database in order to reduce memory usage"""
+            if len(tweets_to_insert) % 50000 == 0:
+                self.collection.insert_many(tweets_to_insert)
+                tweets_to_insert = []
+        if len(tweets_to_insert) > 0:
+            self.collection.insert_many(tweets_to_insert)
+
+        print(f'\t Parsing done with {counter} tweets inserted into mongoDB')
+        return counter
 
 
-def insert_tweets(tweets_to_mongo):
-    collection.insert_many(tweets_to_mongo)
+    def main(self):
+        print(f"Number of initial tweets (DB): {len(self.tweet_ids)}\n")
+        end_point, start_point = self.get_files_range()
 
+        if end_point == 0 or end_point <= start_point:
+            return
 
-def index_creation():
-    collection.create_index([('created_at', 1)])
+        for fileIndex in range(start_point, end_point+1):
+            for prefix in ['ht_coronavirus_', 'ht_COVID19_']:
+                _ = self.file_parse(prefix + f'{fileIndex}.gz')
 
-
-def helper(comp_file, file):
-    with gzip.open(comp_file, 'rb') as f_in:
-        with open(file, 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
-    num = read_json(file)
-    os.remove(file)
-    return num
-
-
-def print_stats(file, num, prev):
-    print(f"\n================================\n{file}\nNumber of tweets(file): {num}")
-    print(f"Number of tweets added: {len(tweet_ids) - prev}")
-    print(f"Total Number of tweets: {len(tweet_ids)}")
-
-
-def main():
-    print(f"Number of initial tweets (DB): {len(tweet_ids)}\n")
-
-    for i in range(2, 5):
-        comp_file = 'ht_coronavirus_' + str(i) + '.gz'
-        file = 'ht_coronavirus_' + str(i) + '.json'
-        prev = len(tweet_ids)
-        num = helper(comp_file, file)
-        print_stats(file, num, prev)
-
-        comp_file = 'ht_COVID19_' + str(i) + '.gz'
-        file = 'ht_COVID19_' + str(i) + '.json'
-        prev = len(tweet_ids)
-        num = helper(comp_file, file)
-        print_stats(file, num, prev)
-
-    print('=======================================')
-    print(f"Total Number of tweets (DB): {len(tweet_ids)}")
-    index_creation()
+        print('=======================================')
+        print(f"Total Number of tweets (DB): {len(self.tweet_ids)}")
+        self.client.close()
 
 
 if __name__ == '__main__':
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    db = client['covidTweetsDB']
-    collection = db['tweets']
-
-    tweet_ids = set([item["id"] for item in collection.find({}, {"_id": 0, "id": 1})])
-
-    main()
+    jp = JsonParser()
+    jp.main()

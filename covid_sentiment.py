@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-from extra import *
 
+from mongoConfig import mongoConfig
 import collections
 import pymongo
 from dateutil import parser
@@ -23,30 +23,26 @@ def helper(db, start_date, end_date):
 
     for tweet in db.tweets.find(
             {"created_at": {"$gte": start_date, "$lt": end_date}, "retweeted_status": {"$exists": False}}):
-        tweet_text = remove_rt(remove_url(get_text(tweet)))
-        if tweet_text is None or len(
-                tweet_text) < 3 or " " not in tweet_text or "account is temporarily unavailable because it violates the Twitter Media Policy. Learn more." in tweet_text or "account has been withheld in " in tweet_text:
-            continue
+        text = tweet["text"]
         ids.add(tweet["id"])
-        tweet_texts[tweet["id"]] = tweet_text
+        tweet_texts[tweet["id"]] = text
 
     for tweet in db.tweets.find(
             {"created_at": {"$gte": start_date, "$lt": end_date}, "retweeted_status": {"$exists": True}}):
-        rt_text = remove_rt(remove_url(get_text(tweet)))
-        if rt_text is None or len(rt_text) < 3 or " " not in rt_text:
-            continue
-        seq_size = len(rt_text[:-5])
+        text = tweet["text"]
+        seq_size = len(text[:-5])
 
         """check if text sequences is same with the original text"""
-        if (tweet["retweeted_status"]["id"] in ids) and rt_text[:-5] == tweet_texts[
-                                                                            tweet["retweeted_status"]["id"]][
-                                                                        :seq_size]:
+        if (tweet["retweeted_status"]["id"] in ids) and text[:-5] == tweet_texts[tweet["retweeted_status"]["id"]][:seq_size]:
             """if text is same , we increase multiplier index"""
             tweet_multi[tweet["retweeted_status"]["id"]] += 1
         elif tweet["retweeted_status"]["id"] not in ids:
             """case when we dont have the original tweet text, so we keep id and text for analysis"""
             ids.add(tweet["retweeted_status"]["id"])
-            tweet_texts[tweet["retweeted_status"]["id"]] = rt_text
+            tweet_texts[tweet["retweeted_status"]["id"]] = text
+        else:
+            ids.add(tweet["id"])
+            tweet_texts[tweet["id"]] = text
 
     ids_list = []
     all_tweets = 0
@@ -149,8 +145,8 @@ def set_start_date():
 
 
 def main():
-    client = pymongo.MongoClient("mongodb://localhost:27027/")
-    db = client['covidTweetsDB']
+    client = pymongo.MongoClient(mongoConfig["address"])
+    db = client[mongoConfig["db"]]
 
     start_date = set_start_date() + timedelta(days=1)
     cur_date = start_date

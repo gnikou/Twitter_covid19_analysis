@@ -8,6 +8,7 @@ from datetime import timedelta
 from pathlib import Path
 import pandas as pd
 import sys
+import time
 
 tokenizer = AutoTokenizer.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")
 model = AutoModelForSequenceClassification.from_pretrained("vicgalle/xlm-roberta-large-xnli-anli")
@@ -54,7 +55,7 @@ def helper(db, start_date, end_date):
         ids_list.append(tw_id)
         all_tweets += tweet_multi[tw_id]
 
-    print(f"Day: {start_date} Number of tweets: {all_tweets}")
+    print(f"\nDay: {start_date} Number of tweets: {all_tweets}")
     sent_classifier(tweet_text_list, tweet_multi, all_tweets, ids_list, start_date)
 
 
@@ -157,7 +158,10 @@ def main():
     end_date = start_date + timedelta(days=num_of_days)
 
     while cur_date <= end_date:
+        start_time = time.time()
         helper(db, cur_date, cur_date + timedelta(days=1))
+        elapsed_time = time.time() - start_time
+        print(time.strftime("Time elapsed: %H:%M:%S", time.gmtime(elapsed_time)))
         cur_date += timedelta(days=1)
 
     client.close()

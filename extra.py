@@ -106,31 +106,31 @@ Merge the original tweet text and retweet from Twitter object, in order to get f
 
 
 def merge_tw_rt(tweet_text, retweet_text):
-    if ": " not in tweet_text:
-        # print("Tweet:->{}\nRetweet:->{}\n\n".format(tweet_text, retweet_text))
-        ind = 0
-    else:
-        ind = tweet_text.index(": ") + 2
+    while tweet_text.startswith("RT"):
+        ind = tweet_text.index(":") + 1
+        tweet_text = tweet_text[ind:].strip()
 
-    start_ind_tw = None
-    start_ind_rt = None
+    if "…" in tweet_text:
+        tweet_text = tweet_text.replace("…", " ").strip()
 
-    if len(tweet_text) - ind <= 6:
-        if tweet_text[ind:] in retweet_text:
-            start_ind_rt = retweet_text.index(tweet_text[ind:])
-            start_ind_tw = ind
-    else:
-        for i in range(ind, len(tweet_text) - 6):
-            if tweet_text[i:i + 6] in retweet_text:
-                start_ind_rt = retweet_text.index(tweet_text[i:i + 6])
-                start_ind_tw = i
-                break
-    if start_ind_tw != None:
-        new = tweet_text[:start_ind_tw] + retweet_text[start_ind_rt:]
-    else:
-        print("No intersection between tw:{}\nrt:{}\n".format(tweet_text, retweet_text))
-        new = tweet_text
 
-    if "…" not in tweet_text and len(new) <= len(tweet_text):
-        new = tweet_text
-    return new
+    while retweet_text.startswith("RT"):
+        ind = retweet_text.index(":") + 1
+        retweet_text = retweet_text[ind:].strip()
+
+    if "…" in retweet_text:
+        retweet_text = retweet_text.replace("…", " ").strip()
+
+    division = 3 if len(retweet_text) < 50 else 4
+
+    ind = tweet_text.index(retweet_text[: int(len(retweet_text) / division)])
+    if ind == 0:
+        if len(retweet_text) > len(tweet_text):
+            return retweet_text
+        elif len(retweet_text) <= len(tweet_text):
+            return tweet_text
+    elif ind > 0:
+        return tweet_text[: ind] + retweet_text
+    elif ind < 0:
+        print(f'Not possible to merge {tweet_text} and {retweet_text}')
+        return tweet_text

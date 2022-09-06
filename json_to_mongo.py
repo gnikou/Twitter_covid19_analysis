@@ -74,7 +74,7 @@ class JsonParser:
             if int(tweet["id"]) in self.tweet_ids:
                 continue
 
-            text = remove_rt(remove_url(get_text(tweet))).strip()
+            text = text_cleanup(get_text(tweet)).strip()
 
             if (text is None or len(text) < 3 or
                 ("account is temporarily unavailable because it violates the Twitter Media Policy. Learn more." in text)

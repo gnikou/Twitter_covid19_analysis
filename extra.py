@@ -132,5 +132,5 @@ def merge_tw_rt(tweet_text, retweet_text):
     elif ind > 0:
         return tweet_text[: ind] + retweet_text
     elif ind < 0:
-        print(f'Not possible to merge {tweet_text} and {retweet_text}')
+        print(f'Not possible to merge --{tweet_text}-- and --{retweet_text}--')
         return tweet_text

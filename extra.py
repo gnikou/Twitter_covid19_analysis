@@ -107,7 +107,7 @@ Merge the original tweet text and retweet from Twitter object, in order to get f
 
 def merge_tw_rt(tweet_text, retweet_text):
     while tweet_text.startswith("RT"):
-        ind = tweet_text.index(":") + 1
+        ind = tweet_text.index(":") + 1 if ":" in tweet_text else tweet_text.index("RT") + 2
         tweet_text = tweet_text[ind:].strip()
 
     if "…" in tweet_text:
@@ -115,7 +115,7 @@ def merge_tw_rt(tweet_text, retweet_text):
 
 
     while retweet_text.startswith("RT"):
-        ind = retweet_text.index(":") + 1
+        ind = retweet_text.index(":") + 1 if ":" in retweet_text else retweet_text.index("RT") + 2
         retweet_text = retweet_text[ind:].strip()
 
     if "…" in retweet_text:
@@ -123,7 +123,7 @@ def merge_tw_rt(tweet_text, retweet_text):
 
     division = 3 if len(retweet_text) < 50 else 4
 
-    ind = tweet_text.index(retweet_text[: int(len(retweet_text) / division)])
+    ind = tweet_text.index(retweet_text[: int(len(retweet_text) / division)]) if retweet_text[: int(len(retweet_text) / division)] in tweet_text else -1
     if ind == 0:
         if len(retweet_text) > len(tweet_text):
             return retweet_text

@@ -106,13 +106,15 @@ Merge the original tweet text and retweet from Twitter object, in order to get f
 
 
 def merge_tw_rt(tweet_text, retweet_text):
+    tweet_text = remove_url(tweet_text)
+    retweet_text = remove_url(retweet_text)
+
     while tweet_text.startswith("RT"):
         ind = tweet_text.index(":") + 1 if ":" in tweet_text else tweet_text.index("RT") + 2
         tweet_text = tweet_text[ind:].strip()
 
     if "…" in tweet_text:
         tweet_text = tweet_text.replace("…", " ").strip()
-
 
     while retweet_text.startswith("RT"):
         ind = retweet_text.index(":") + 1 if ":" in retweet_text else retweet_text.index("RT") + 2
@@ -132,5 +134,4 @@ def merge_tw_rt(tweet_text, retweet_text):
     elif ind > 0:
         return tweet_text[: ind] + retweet_text
     elif ind < 0:
-        print(f'Not possible to merge --{tweet_text}-- and --{retweet_text}--')
         return tweet_text

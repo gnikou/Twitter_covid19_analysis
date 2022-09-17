@@ -20,7 +20,6 @@ def helper(db, start_date, end_date):
     tweet_texts = collections.defaultdict(lambda: "")
     tweet_multi = collections.defaultdict(lambda: 1)
     tweet_text_list = []
-
     for tweet in db.tweets.find(
             {"created_at": {"$gte": start_date, "$lt": end_date}, "retweeted_status": {"$exists": False}}):
         text = tweet["text"]
@@ -31,9 +30,9 @@ def helper(db, start_date, end_date):
             {"created_at": {"$gte": start_date, "$lt": end_date}, "retweeted_status": {"$exists": True}}):
         text = tweet["text"]
         seq_size = len(text[:-5])
-
         """check if text sequences is same with the original text"""
-        if (tweet["retweeted_status"]["id"] in ids) and text[:-5] == tweet_texts[tweet["retweeted_status"]["id"]][:seq_size]:
+        if (tweet["retweeted_status"]["id"] in ids) and text[:-5] == tweet_texts[tweet["retweeted_status"]["id"]][
+                                                                     :seq_size]:
             """if text is same , we increase multiplier index"""
             tweet_multi[tweet["retweeted_status"]["id"]] += 1
         elif tweet["retweeted_status"]["id"] not in ids:
@@ -64,8 +63,7 @@ def sent_classifier(tweet_text_list, tweet_multi, all_tweets, ids_list, start_da
                         'positive for cases', 'negative for cases',
                         'positive for deaths', 'negative for deaths',
                         'positive for propaganda', 'negative for propaganda',
-                        'positive for 5G', 'negative for 5G',
-                        ]
+                        'positive for 5G', 'negative for 5G']
     sentiment = classifier(tweet_text_list, sentiment_labels, batch_size=16, gradient_accumulation_steps=4,
                            gradient_checkpointing=True, fp16=True, optim="adafactor")
 
@@ -104,10 +102,10 @@ def writef_id_sentiment(data, ids_list, sentiment, sentiment_labels):
     list_ids += "tweet_id\t" + '\t'.join(sentiment_labels)
 
     for item in range(len(sentiment)):
-        list_ids += f"\n{ids_list[item]}\t"
+        list_ids += f"\n{ids_list[item]}"
         for label in sentiment_labels:
             index = sentiment[item]['labels'].index(label)
-            list_ids += f"{sentiment[item]['scores'][index]:.3f}\t"
+            list_ids += f"\t{sentiment[item]['scores'][index]}"
     ids_file.write(list_ids)
     ids_file.close()
 
@@ -138,17 +136,17 @@ def set_start_date():
     try:
         df = pd.read_csv(fname, sep='\t')
     except OSError:
-        return parser.parse("2020-02-18")
+        return parser.parse("2020-02-19")
 
     # returns last written day
-    return parser.parse(df["day"].tail(1).item())
+    return parser.parse(df["day"].tail(1).item()) + timedelta(days=1)
 
 
 def main():
     client = pymongo.MongoClient(mongoConfig["address"])
     db = client[mongoConfig["db"]]
 
-    start_date = set_start_date() + timedelta(days=1)
+    start_date = set_start_date()
     cur_date = start_date
     num_of_days = int(sys.argv[1]) - 1
     end_date = start_date + timedelta(days=num_of_days)

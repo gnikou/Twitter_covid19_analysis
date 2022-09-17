@@ -2,9 +2,9 @@ import pymongo
 from dateutil import parser
 from datetime import timedelta
 import pandas as pd
-import sys
 from pathlib import Path
 import collections
+from mongoConfig import mongoConfig
 
 
 def tweets_users_count(db, start_date, end_date):
@@ -13,8 +13,8 @@ def tweets_users_count(db, start_date, end_date):
     for tweet in db.tweets.find(
             {"created_at": {"$gte": start_date, "$lt": end_date}}):
         tweets_count += 1
-        if tweet['user']['id'] not in user_ids:
-            user_ids.add(tweet['user']['id'])
+        if tweet['user_id'] not in user_ids:
+            user_ids.add(tweet['user_id'])
     return tweets_count, len(user_ids)
 
 
@@ -23,24 +23,8 @@ def get_hashtags(db, start_date, end_date):
 
     for tweet in db.tweets.find(
             {"created_at": {"$gte": start_date, "$lt": end_date}}):
-        if "extended_tweet" in tweet:
-            for ht in tweet['entities']['hashtags']:
-                hashtags[ht['text']] += 1
-
-        elif "entities" in tweet:
-            for ht in tweet['entities']['hashtags']:
-                hashtags[ht['text']] += 1
-
-        if "retweeted_status" in tweet:
-            if "extended_tweet" in tweet["retweeted_status"]:
-                if tweet["retweeted_status"]["extended_tweet"]['entities']['hashtags'] in tweet:
-                    for ht in tweet["retweeted_status"]["extended_tweet"]['entities']['hashtags']:
-                        hashtags[ht['text']] += 1
-
-            elif 'entities' in tweet["retweeted_status"]:
-                for ht in tweet['retweeted_status']['entities']['hashtags']:
-                    hashtags[ht['text']] += 1
-
+        for ht in tweet["hashtags"]:
+            hashtags[ht] += 1
     return hashtags
 
 
@@ -61,8 +45,7 @@ def writef_tweets_users(cur_date, tweets_count, users_count):
 
 def writef_hashtags_count(cur_date, hashtags):
     date = "{}-{}-{}".format(cur_date.year, cur_date.month, cur_date.day)
-    file = open(f"hashtags_count_day_{date}.csv", "w+")
-
+    file = open(f"hashtags_count_day_{date}.csv", "w", encoding="utf-8")
     list_hts = ""
     list_hts += "Hashtag\tcount"
 
@@ -72,25 +55,25 @@ def writef_hashtags_count(cur_date, hashtags):
     file.close()
 
 
-def set_start_date():
+def set_start_date(db):
     fname = "tweets_users_count_pd.csv"
     try:
         df = pd.read_csv(fname, sep='\t')
     except OSError:
-        return parser.parse("2020-02-18")
-
+        for i in db.tweets.find({}, {"created_at": 1, "_id": 0}).sort('created_at', 1).limit(1):
+            return parser.parse(i['created_at'].strftime('%Y-%m-%d'))
     # returns last written day
-    return parser.parse(df["day"].tail(1).item())
+    return parser.parse(df["day"].tail(1).item()) + timedelta(days=1)
 
 
 def main():
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    db = client['covidTweetsDB']
+    client = pymongo.MongoClient(mongoConfig["address"])
+    db = client[mongoConfig["db"]]
 
-    start_date = set_start_date() + timedelta(days=1)
+    start_date = set_start_date(db)
     cur_date = start_date
-    num_of_days = int(sys.argv[1]) - 1
-    end_date = start_date + timedelta(days=num_of_days)
+    for i in db.tweets.find({}, {"created_at": 1, "_id": 0}).sort('created_at', -1).limit(1):
+        end_date = parser.parse(i['created_at'].strftime('%Y-%m-%d'))
 
     while cur_date <= end_date:
         tweets_count, users_count = tweets_users_count(db, cur_date, cur_date + timedelta(days=1))

@@ -81,7 +81,15 @@ class JsonParser:
             line = fstream.readline()
             if not line:
                 break
-            tweet = json.loads(line)
+
+            try:
+                tweet = json.loads(line)
+            except ValueError:
+                print('Decoding JSON has failed - value error')
+                continue
+            except TypeError:
+                print('Decoding JSON has failed - type error')
+                continue
 
             """Check if tweet is not already in database"""
             if int(tweet["id"]) in self.tweet_ids:

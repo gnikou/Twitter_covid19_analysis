@@ -50,7 +50,7 @@ def helper(db, start_date, end_date):
         ids_list.append(tw_id)
         all_tweets += tweet_multi[tw_id]
 
-    print(f"\nDay: {start_date} Number of tweets: {all_tweets}")
+    print(f"\nDay: {start_date} Number of tweets processed: {all_tweets}")
     sent_classifier(tweet_text_list, tweet_multi, all_tweets, ids_list, start_date)
 
 
@@ -74,7 +74,7 @@ def sent_classifier(tweet_text_list, tweet_multi, all_tweets, ids_list, start_da
             label = sentiment[item]['labels'][ind].replace(" ", "_")
             sent_scores[label] += (sentiment[item]['scores'][ind] * tweet_multi[ids_list[item]])
 
-    data = "{}-{}-{}".format(start_date.year, start_date.month, start_date.day)
+    data = f"{start_date.year}-{start_date.month}-{start_date.day}"
 
     writef_id_sentiment(data, ids_list, sentiment, sentiment_labels)
     writef_sentiment(all_tweets, data, sentiment_labels, sent_scores)
@@ -97,7 +97,7 @@ def replace_labels(original_text):
 
 
 def writef_id_sentiment(data, ids_list, sentiment, sentiment_labels):
-    ids_file = open("sentiment_by_id_day_{}.csv".format(data), "w+")
+    ids_file = open(f"/Storage/gnikou/sentiment_by_id_day_{data}.csv", "w+")
     list_ids = ""
     list_ids += "tweet_id\t" + '\t'.join(sentiment_labels)
 
@@ -111,28 +111,28 @@ def writef_id_sentiment(data, ids_list, sentiment, sentiment_labels):
 
 
 def writef_sentiment(all_tweets, data, sentiment_labels, sent_scores):
-    my_file = Path("/home/gnikou/twitter_covid_sentiment.csv")
+    my_file = Path("/Storage/gnikou/twitter_covid_sentiment.csv")
 
     if my_file.is_file():
-        file_out = open("twitter_covid_sentiment.csv", "a+")
+        file_out = open("/Storage/gnikou/twitter_covid_sentiment.csv", "a+")
         for label in sentiment_labels:
             label = label.replace(" ", "_")
             data += "\t{}".format((sent_scores[label] / all_tweets) if all_tweets != 0 else 0.0)
-        file_out.write("{}\n".format(data))
+        file_out.write(f"{data}\n")
 
     else:
-        file_out = open("twitter_covid_sentiment.csv", "w+")
+        file_out = open("/Storage/gnikou/twitter_covid_sentiment.csv", "w+")
         header = "day"
         for label in sentiment_labels:
             label = label.replace(" ", "_")
             header += "\t" + label
             data += "\t{}".format((sent_scores[label] / all_tweets) if all_tweets != 0 else 0.0)
-        file_out.write("{}\n{}\n".format(header, data))
+        file_out.write(f"{header}\n{data}\n")
     file_out.close()
 
 
 def set_start_date():
-    fname = "twitter_covid_sentiment.csv"
+    fname = "/Storage/gnikou/twitter_covid_sentiment.csv"
     try:
         df = pd.read_csv(fname, sep='\t')
     except OSError:

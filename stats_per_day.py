@@ -38,7 +38,7 @@ def writef_tweets_users(cur_date, tweets_count, users_count):
 
     else:
         file_out = open("tweets_users_count_pd.csv", "w+")
-        header = "day\ttweets\tunique users"
+        header = "day\ttweets\tusers"
         file_out.write("{}\n{}\t{}\t{}".format(header, date, tweets_count, users_count))
     file_out.close()
 

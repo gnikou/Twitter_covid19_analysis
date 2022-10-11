@@ -5,6 +5,8 @@ import pandas as pd
 from pathlib import Path
 import collections
 from mongoConfig import mongoConfig
+import os
+import csv
 
 
 def tweets_users_count(db, start_date, end_date):
@@ -38,7 +40,7 @@ def writef_tweets_users(cur_date, tweets_count, users_count):
 
     else:
         file_out = open("tweets_users_count_pd.csv", "w+")
-        header = "day\ttweets\tunique users"
+        header = "day\ttweets\tusers"
         file_out.write("{}\n{}\t{}\t{}".format(header, date, tweets_count, users_count))
     file_out.close()
 
@@ -53,6 +55,27 @@ def writef_hashtags_count(cur_date, hashtags):
         list_hts += f"\n{ht}\t{hashtags[ht]}"
     file.write(list_hts)
     file.close()
+
+
+def write_hashtags_by_month():
+    for month in range(2, 8):
+        hashtags = collections.defaultdict(int)
+        for day in range(1, 32):
+            file = f"hashtags_count_day_2020-{month}-{day}.csv"
+            if os.path.exists(file):
+                with open(file, encoding='utf-8') as csv_file:
+                    csv_reader = csv.reader(csv_file, delimiter='\t')
+                    next(csv_reader)
+                    for row in csv_reader:
+                        hashtags[row[0]] += int(row[1])
+        file = open(f"hashtags_month_{month}.csv", "w", encoding="utf-8")
+        list_hts = ""
+        list_hts += "Hashtag\tcount"
+
+        for ht in hashtags:
+            list_hts += f"\n{ht}\t{hashtags[ht]}"
+        file.write(list_hts)
+        file.close()
 
 
 def set_start_date(db):
@@ -83,6 +106,7 @@ def main():
             writef_hashtags_count(cur_date, hashtags)
         cur_date += timedelta(days=1)
 
+    write_hashtags_by_month()
     client.close()
 
 

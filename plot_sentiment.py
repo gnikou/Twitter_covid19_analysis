@@ -14,14 +14,14 @@ def plot_positive_sentiment(filename):
     df.set_index("day", inplace=True, drop=True)
     df.plot(ax=ax)
 
+    fig = plt.figure(figsize=(19.20, 10.80))
     plt.title("Positive sentiment score of covid-related tweets")
     plt.xlabel('Dates')
     plt.ylabel('Sentiment score')
     fig.autofmt_xdate()
-    fig.set_size_inches((20.92, 11.77), forward=False)
     plt.margins(x=0)
-    plt.savefig('positive-sentiment-plot.png', dpi=500)
-    # plt.show()
+    fig.tight_layout()
+    plt.savefig('positive-sentiment-plot.jpg', format='jpg', dpi=500)
 
 
 def plot_negative_sentiment(filename):
@@ -37,17 +37,18 @@ def plot_negative_sentiment(filename):
     df = -df
     df.plot(ax=ax)
 
+    fig = plt.figure(figsize=(19.20, 10.80))
     plt.title("negative sentiment score of covid-related tweets")
     plt.xlabel('Dates')
     plt.ylabel('Sentiment score')
     fig.autofmt_xdate()
-    fig.set_size_inches((20.92, 11.77), forward=False)
     plt.margins(x=0)
-    plt.savefig('negative-sentiment-plot.png', dpi=500)
-    # plt.show()
+    fig.tight_layout()
+    plt.savefig('negative-sentiment-plot.jpg', format='jpg', dpi=500)
 
 
 def main():
+    plt.rcParams['figure.figsize'] = [19.20, 10.80]
     filename = "twitter_covid_sentiment.csv"
     plot_positive_sentiment(filename)
     plot_negative_sentiment(filename)

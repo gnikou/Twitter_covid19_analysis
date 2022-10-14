@@ -78,13 +78,30 @@ def write_hashtags_by_month():
         file.close()
 
 
+def get_languages(db):
+    languages = collections.defaultdict(lambda: 0)
+    for i in db.tweets.find({}, {"lang": 1, "_id": 0}):
+        for lang in i["lang"]:
+            languages[lang] += 1
+
+    file = open("languages_count.csv", "w", encoding="utf-8")
+    list_lang = ""
+    list_lang += "Language\tcount"
+
+    for lang in languages:
+        list_lang += f"\n{lang}\t{languages[lang]}"
+    file.write(list_lang)
+    file.close()
+
+
 def set_start_date(db):
     fname = "tweets_users_count_pd.csv"
     try:
         df = pd.read_csv(fname, sep='\t')
     except OSError:
-        for i in db.tweets.find({}, {"created_at": 1, "_id": 0}).sort('created_at', 1).limit(1):
-            return parser.parse(i['created_at'].strftime('%Y-%m-%d'))
+        return [parser.parse(i['created_at'].strftime('%Y-%m-%d')) for i in
+                db.tweets.find({}, {"created_at": 1, "_id": 0}).sort('created_at', 1).limit(1)][0]
+
     # returns last written day
     return parser.parse(df["day"].tail(1).item()) + timedelta(days=1)
 
@@ -95,8 +112,8 @@ def main():
 
     start_date = set_start_date(db)
     cur_date = start_date
-    for i in db.tweets.find({}, {"created_at": 1, "_id": 0}).sort('created_at', -1).limit(1):
-        end_date = parser.parse(i['created_at'].strftime('%Y-%m-%d'))
+    end_date = [parser.parse(i['created_at'].strftime('%Y-%m-%d')) for i in
+                db.tweets.find({}, {"created_at": 1, "_id": 0}).sort('created_at', -1).limit(1)][0]
 
     while cur_date <= end_date:
         tweets_count, users_count = tweets_users_count(db, cur_date, cur_date + timedelta(days=1))
@@ -107,6 +124,7 @@ def main():
         cur_date += timedelta(days=1)
 
     write_hashtags_by_month()
+    get_languages(db)
     client.close()
 
 

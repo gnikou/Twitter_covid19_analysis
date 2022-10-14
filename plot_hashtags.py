@@ -1,7 +1,6 @@
 import pandas as pd
 import collections
 import csv
-import os.path
 import calendar
 import re
 import matplotlib.pyplot as plt
@@ -44,7 +43,6 @@ def plot_other_hashtags():
 
         fig = plt.figure()
 
-        # creating the bar plot
         plt.bar(hashtags, count, color='blue', width=0.4)
         plt.xticks(fontname="MS Gothic")
         fig.autofmt_xdate()

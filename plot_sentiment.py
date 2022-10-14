@@ -14,7 +14,6 @@ def plot_positive_sentiment(filename):
     df.set_index("day", inplace=True, drop=True)
     df.plot(ax=ax)
 
-    fig = plt.figure(figsize=(19.20, 10.80))
     plt.title("Positive sentiment score of covid-related tweets")
     plt.xlabel('Dates')
     plt.ylabel('Sentiment score')
@@ -37,7 +36,6 @@ def plot_negative_sentiment(filename):
     df = -df
     df.plot(ax=ax)
 
-    fig = plt.figure(figsize=(19.20, 10.80))
     plt.title("negative sentiment score of covid-related tweets")
     plt.xlabel('Dates')
     plt.ylabel('Sentiment score')

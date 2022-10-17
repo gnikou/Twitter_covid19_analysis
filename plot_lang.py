@@ -1,5 +1,4 @@
 import pymongo
-import collections
 from mongoConfig import mongoConfig
 import pandas as pd
 import matplotlib.pyplot as plt

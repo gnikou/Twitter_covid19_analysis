@@ -18,6 +18,7 @@ def plot_positive_sentiment(filename):
     plt.xlabel('Dates')
     plt.ylabel('Sentiment score')
     fig.autofmt_xdate()
+    ax.legend(loc='upper center')
     plt.margins(x=0)
     fig.tight_layout()
     plt.savefig('positive-sentiment-plot.jpg', format='jpg', dpi=500)
@@ -36,10 +37,11 @@ def plot_negative_sentiment(filename):
     df = -df
     df.plot(ax=ax)
 
-    plt.title("negative sentiment score of covid-related tweets")
+    plt.title("Negative sentiment score of covid-related tweets")
     plt.xlabel('Dates')
     plt.ylabel('Sentiment score')
     fig.autofmt_xdate()
+    ax.legend(loc='lower center')
     plt.margins(x=0)
     fig.tight_layout()
     plt.savefig('negative-sentiment-plot.jpg', format='jpg', dpi=500)

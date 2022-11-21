@@ -90,11 +90,54 @@ def plot_comparing_top_hts():
     plt.savefig("top_hashtags_comparison.jpg", format='jpg', dpi=500)
 
 
+def plot_noncovid_comparing_top_hts():
+    hashtags = collections.defaultdict(int)
+    for month in range(2, 8):
+        file = f"hashtags_month_{month}.csv"
+        with open(file, encoding='utf-8') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter='\t')
+            next(csv_reader)
+            for row in csv_reader:
+                hashtags[row[0]] += int(row[1])
+
+    df = pd.DataFrame.from_dict(hashtags, orient='index', columns=["count"])
+    df.reset_index(inplace=True)
+    df = df.rename(columns={'index': 'Hashtag'})
+    patternDel = "(covid|coronavirus)+"
+    df = df[df['Hashtag'].str.contains(patternDel, flags=re.IGNORECASE) == False]
+    df.set_index("Hashtag", inplace=True, drop=True)
+
+    df = df.sort_values(by="count", ascending=False)
+
+    hts = list(df.iloc[0:5].index)
+
+    d = pd.DataFrame(columns=['month'] + hts)
+    for month in range(2, 8):
+        nums = [calendar.month_name[month]]
+        file = f"hashtags_month_{month}.csv"
+        df = pd.read_csv(file, delimiter='\t')
+        df.set_index("Hashtag", inplace=True, drop=True)
+        for i in hts:
+            nums.append(df.loc[i, 'count'])
+        d.loc[d.shape[0]] = nums
+    d.set_index("month", inplace=True)
+
+    fig = plt.figure()
+    d.plot(kind='bar')
+    plt.ticklabel_format(style='plain', axis='y')
+    plt.title("Monthly top hashtags volume")
+    plt.ylabel("Count")
+    plt.xlabel("Month")
+    fig.tight_layout()
+    plt.savefig("top_noncovid_hashtags_comparison.jpg", format='jpg', dpi=500)
+
+
 def main():
     plt.rcParams['figure.figsize'] = [19.20, 10.80]
     plot_ht_by_month()
     plot_other_hashtags()
     plot_comparing_top_hts()
+    plot_noncovid_comparing_top_hts()
 
 
 if __name__ == '__main__':

@@ -6,16 +6,7 @@ Remove emojis from text. List of emojis and clear text is returned
 
 
 def remove_url(tweet, text):
-    #text = re.sub(
-    #    r'''(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))''',
-    #    " ", text)
-    #return text
-    #regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
-    #url = [x[0] for x in re.findall(regex, text)]
-    #for link in url:
-    #    text = text.replace(link, " ")
 
-    
     for url in get_urls(tweet):
         text = text.replace(url, ' ')
     text = re.sub(

@@ -1,8 +1,8 @@
-# An experimental analysis of Twitter suspension during the first COVID period
+## An experimental analysis of Twitter suspension during the first COVID period
 
-## Analyzing COVID-19 Tweets: Sentiment and Data Analysis and a study of the tweets written by suspended users.
+#### Analyzing COVID-19 Tweets: Sentiment and Data Analysis and a study of the tweets written by suspended users
 
-This thesis is the study of a large Twitter dataset about COVID19 during the pandemic outbreak. This study is divided into these parts:
+The thesis is the study of a large Twitter dataset about COVID19 during the pandemic outbreak. This study can be break down to these parts:
 
 * Parsed, cleaned, and stored a dataset of ∼200M covid-related tweets from JSON format to a MongoDB
 database

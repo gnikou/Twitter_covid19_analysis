@@ -10,23 +10,25 @@ def all_tweets():
 
     df = pd.read_csv(filename, delimiter='\t')
     df['day'] = pd.to_datetime(df['day'])
-
     df.set_index("day", inplace=True, drop=True)
+    d = df.describe()
+
     df.plot(ax=ax, x_compat=True)
 
     ax.xaxis.set_major_formatter(DateFormatter("%d-%m-%Y"))
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
-    # ax.set_xlim(["2020-02-19", "2020-07-11"])
 
-    plt.title("Volume of tweets-users per day")
+    plt.title("Volume of tweets-users per day", fontsize=24, fontweight="bold")
     plt.xlabel('Dates')
     plt.ylabel('Volume')
     fig.autofmt_xdate()
     ax.ticklabel_format(style='plain', axis='y')
-    fig.set_size_inches((20.92, 11.77), forward=False)
     plt.margins(x=0)
     fig.tight_layout()
-    plt.savefig('daily-tweets-users.jpg', dpi=500)
+    plt.axvline(x='2020-3-11', linewidth=2.5, linestyle='--', color='black')
+    ax.annotate('WHO declares COVID-19 a pandemic', xy=('2020-3-11', 3), xytext=(15, 15),
+                textcoords='offset points', arrowprops=dict(arrowstyle='-|>'), fontsize=20)
+    plt.savefig('daily-tweets-users.pdf', dpi=300)
 
 
 def suspended_only():
@@ -37,21 +39,26 @@ def suspended_only():
     df['day'] = pd.to_datetime(df['day'])
 
     df.set_index("day", inplace=True, drop=True)
+    c = df.describe()
+
     df.plot(ax=ax, x_compat=True)
 
     ax.xaxis.set_major_formatter(DateFormatter("%d-%m-%Y"))
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
-    # ax.set_xlim(["2020-02-19", "2020-07-11"])
 
-    plt.title("Volume of suspended tweets-users per day")
+    plt.title("Volume of suspended tweets-users per day", fontsize=24, fontweight="bold")
     plt.xlabel('Dates')
     plt.ylabel('Volume')
     fig.autofmt_xdate()
     ax.ticklabel_format(style='plain', axis='y')
-    fig.set_size_inches((20.92, 11.77), forward=False)
     plt.margins(x=0)
     fig.tight_layout()
-    plt.savefig('daily-suspended tweets-users.jpg', dpi=500)
+    ax.legend(["tweets", "users"])
+
+    plt.axvline(x='2020-3-11', linewidth=2.5, linestyle='--', color='black')
+    ax.annotate('WHO declares COVID-19 a pandemic', xy=('2020-3-11', 3), xytext=(15, 15),
+                textcoords='offset points', arrowprops=dict(arrowstyle='-|>'), fontsize=20)
+    plt.savefig('daily-suspended tweets-users.pdf', dpi=300)
 
 
 def compare_suspended_all():
@@ -70,31 +77,90 @@ def compare_suspended_all():
 
     # remove suspended users/tweets from all tweets
     for i in df.index:
-        df.loc[i, "tweets"] = df.loc[i, "tweets"] - df.loc[i, "suspended_tweets"]
+        df.loc[i, "tweets"] = df.loc[i, "tweets"] - df.loc[i, "suspended_count"]
         df.loc[i, "users"] = df.loc[i, "users"] - df.loc[i, "suspended_users"]
+    # df["non suspended ratio"] = df["tweets"] / df["users"]
+    # df["suspended ratio"] = df["suspended_count"] / df["suspended_users"]
+    # df = df.drop("tweets", axis=1)
+    # df = df.drop("users", axis=1)
+    # df = df.drop("suspended_count", axis=1)
+    # df = df.drop("suspended_users", axis=1)
+
+    # print(f"Tweets/unique users ratio (Suspended users): {df['suspended ratio'].mean()}")
+    # print(f"Tweets/unique users ratio (Non suspended users): {df['non suspended ratio'].mean()}")
 
     df.plot(ax=ax, x_compat=True)
 
     ax.xaxis.set_major_formatter(DateFormatter("%d-%m-%Y"))
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
-    # ax.set_xlim(["2020-02-19", "2020-07-11"])
 
-    plt.title("Daily comparison of suspended-all tweets-users")
+    plt.title("Daily comparison of tweets/unique users' ratio")
     plt.xlabel('Dates')
-    plt.ylabel('Volume')
-    plt.legend(["non-suspended users' tweets", "non-suspended users", "suspended users' tweets", "suspended users"])
+    plt.ylabel('Ratio (tweets/unique users)')
     fig.autofmt_xdate()
     ax.ticklabel_format(style='plain', axis='y')
-    fig.set_size_inches((20.92, 11.77), forward=False)
     plt.margins(x=0)
     fig.tight_layout()
-    plt.savefig('daily-comparison-volume.jpg', dpi=500)
+    plt.savefig('daily-comparison-ratio.pdf', dpi=300)
+
+
+def volume_per_month():
+    filename = "tweets_users_count_pd.csv"
+    fig, ax = plt.subplots()
+
+    df = pd.read_csv(filename, delimiter='\t')
+    df['day'] = pd.to_datetime(df['day'])
+    df.set_index("day", inplace=True, drop=True)
+    d = df.groupby(pd.Grouper(freq='M')).sum()
+    d.index = d.index.month
+
+    d.plot(kind='bar', ax=ax)
+
+    plt.title("Volume of tweets-users per month", fontsize=24, fontweight="bold")
+    plt.xlabel('Dates')
+    plt.ylabel('Volume')
+    fig.autofmt_xdate()
+    ax.ticklabel_format(style='plain', axis='y')
+    plt.margins(x=0)
+    fig.tight_layout()
+    plt.savefig('volume_per_month.pdf', dpi=300)
+
+
+def average_volume_per_month():
+    filename = "tweets_users_count_pd.csv"
+    fig, ax = plt.subplots()
+
+    df = pd.read_csv(filename, delimiter='\t')
+    df['day'] = pd.to_datetime(df['day'])
+    df.set_index("day", inplace=True, drop=True)
+    d = df.groupby(pd.Grouper(freq='M')).mean()
+    d.index = d.index.month
+
+    d.plot(kind='bar', ax=ax)
+
+    plt.title("Average daily volume of tweets-users per month", fontsize=24, fontweight="bold")
+    plt.xlabel('Dates')
+    plt.ylabel('Volume')
+    fig.autofmt_xdate()
+    ax.ticklabel_format(style='plain', axis='y')
+    plt.margins(x=0)
+    fig.tight_layout()
+    plt.savefig('average_volume_per_month.pdf', dpi=300)
 
 
 def main():
+    plt.rcParams.update({
+        'figure.figsize': [19.20, 10.80],
+        'font.size': 16,
+        'axes.labelsize': 22,
+        'legend.fontsize': 20,
+        'lines.linewidth': 2
+    })
     all_tweets()
     suspended_only()
     compare_suspended_all()
+    # volume_per_month()
+    # average_volume_per_month()
 
 
 if __name__ == '__main__':

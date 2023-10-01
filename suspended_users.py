@@ -4,7 +4,6 @@ from datetime import timedelta
 import pymongo
 from dateutil import parser
 from mongoConfig import mongoConfig
-import matplotlib.pyplot as plt
 import json
 
 
@@ -43,12 +42,12 @@ def writef_tweetids_from_suspended_users(db):
             tweet_ids.append(tweet["id"])
 
     df = pd.DataFrame(tweet_ids)
-    df.to_csv("/Storage/gnikou/sentiment_per_day/tweets_from_suspended_users", index=False, header=None)
+    df.to_csv("/Storage/gnikou/tweets_from_suspended_users.csv", index=False, header=None)
 
 
 # write in separate files daily sentiment score of suspended users' tweets
 def write_daily_sentiment_susp_users():
-    file = "/Storage/gnikou/sentiment_per_day/tweets_from_suspended_users"
+    file = "/Storage/gnikou/tweets_from_suspended_users.csv"
     df = pd.read_csv(file, header=None)
     susp_tweets_ids = [int(i) for i in df[0].unique()]
 
@@ -104,47 +103,35 @@ def writef_sentiment_susp():
 
 # write to file daily volume of suspended tweets/users
 def daily_tweets_volume(db):
+    file = "tweets_from_suspended_users.csv"
+    df = pd.read_csv(file, header=None)
+    susp_tweets_ids = set(int(i) for i in df[0].unique())
+
     list_date = "day\tcount"
 
     for month in range(2, 8):
         for day in range(1, 32):
-            file = f"/Storage/gnikou/sentiment_per_day/suspended_tweets_day_2020-{month}-{day}.csv"
+            tweets_count = 0
             user_ids = set()
-            if os.path.exists(file):
+            file2 = f"/home/gnikou/sentiment_per_day/sentiment_by_id_day_2020-{month}-{day}.csv"
+            if os.path.exists(file2):
                 date = parser.parse(f"2020-{month}-{day}")
 
-                df = pd.read_csv(file, delimiter='\t', index_col=False)
-                tweets_ids = df['tweet_id'].tolist()
-                for tweet_id in tweets_ids:
-                    for tweet in db.tweets.find(
-                            {"created_at": {"$gte": date, "$lt": date + timedelta(days=1)}, "id": tweet_id},
-                            {"user_id": 1, "_id": 0}):
+                for tweet in db.tweets.find({"created_at": {"$gte": date, "$lt": date + timedelta(days=1)}},
+                                            {"user_id": 1, "id": 1, "_id": 0}):
+                    if tweet['id'] in susp_tweets_ids:
+                        tweets_count += 1
                         if tweet['user_id'] not in user_ids:
                             user_ids.add(tweet['user_id'])
 
                 date = parser.parse(f"2020-{month}-{day}")
                 date = f"{date.year}-{date.month}-{date.day}"
-                list_date += f"\n{date}\t{len(df.index)}\t{len(user_ids)}"
+                list_date += f"\n{date}\t{tweets_count}\t{len(user_ids)}"
+                print(f"\n{date}\t{tweets_count}\t{len(user_ids)}")
 
-    file = open(f"/Storage/gnikou/sentiment_per_day/daily_suspended_volume.csv", "w+")
+    file = open(f"daily_suspended_volume.csv", "w+")
     file.write(list_date)
     file.close()
-
-
-'''
-def sentiment_of_retweets_from_nonsuspended_users(db):
-    for month in range(2, 8):
-        for day in range(1, 32):
-            file = f"suspended_tweets_day_2020-{month}-{day}.csv"
-            file2 = f"sentiment_by_id_day_2020-{month}-{day}.csv"
-            if os.path.exists(file):
-                date = parser.parse(f"2020-{month}-{day}")
-                df = pd.read_csv(file, delimiter='\t', index_col=False)
-                susp_tweets_ids = set(df['tweet_id'].tolist())
-                df2 = pd.read_csv(file2, delimiter='\t', index_col=False)
-                susp_tweets_ids2 = set(df2['tweet_id'].tolist())
-                cm = list(set(susp_tweets_ids2).intersection(set(susp_tweets_ids)))
-'''
 
 
 def main():

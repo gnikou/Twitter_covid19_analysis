@@ -10,13 +10,14 @@ def plot_lang_pie():
     filename = "languages_count.csv"
     df = pd.read_csv(filename, delimiter='\t')
     df = df.sort_values(by="count", ascending=False)
-    df = df.iloc[0:9]
+    df = df.iloc[0:10]
     df.set_index("Language", inplace=True, drop=True)
     data = list(df['count'])
     cols = list(df.index)
-    plt.pie(data, labels=cols, autopct='%.1f%%')
-    plt.title("Most used languages in tweets")
-    plt.savefig('languages-pie.jpg', format='jpg', dpi=500)
+    plt.pie(data, labels=["English", "Spanish", "French", "Thai", "Italian", "Portuguese", "Indonesian", "Hindi",
+                          "Undetermined", "German"], autopct='%.1f%%')
+    plt.title("Ten most used languages in tweets", fontsize=24, fontweight="bold")
+    plt.savefig('languages-pie.pdf', format='pdf', dpi=300)
 
 
 def write_count_pd(db):
@@ -65,7 +66,7 @@ def plot_count_pd():
     plt.ticklabel_format(style='plain', axis='y')
     plt.margins(x=0)
     fig.tight_layout()
-    plt.savefig('language_count_pd.jpg', format='jpg', dpi=500)
+    plt.savefig('language_count_pd.pdf', format='pdf', dpi=300)
     fig, ax = plt.subplots()
     df = df.drop('en', axis=1)
     plt.title("Daily language count without english in tweets")
@@ -75,16 +76,21 @@ def plot_count_pd():
     plt.ticklabel_format(style='plain', axis='y')
     plt.margins(x=0)
     fig.tight_layout()
-    plt.savefig('language_count_no_en.jpg', format='jpg', dpi=500)
+    plt.savefig('language_count_no_en.pdf', format='pdf', dpi=300)
 
 
 def main():
-    plt.rcParams['figure.figsize'] = [19.20, 10.80]
+    plt.rcParams.update({
+        'figure.figsize': [19.20, 10.80],
+        'font.size': 12,
+        'axes.labelsize': 12,
+        'xtick.labelsize': 17,
+        'legend.fontsize': 10,
+        'lines.linewidth': 2
+    })
     client = pymongo.MongoClient(mongoConfig["address"])
     db = client[mongoConfig["db"]]
     plot_lang_pie()
-    write_count_pd(db)
-    plot_count_pd()
 
     client.close()
 

@@ -17,17 +17,16 @@ def plot_ht_by_month():
 
         fig = plt.figure()
 
-        # creating the bar plot
         plt.bar(hashtags, count, color='blue', width=0.4)
         fig.autofmt_xdate()
 
         plt.ticklabel_format(style='plain', axis='y')
-        plt.xticks(fontname="MS Gothic")  # This argument will change the font.
-        plt.title(f"Top 10 popular hashtags for {calendar.month_name[month]}")
+        plt.xticks(fontname="MS Gothic")
+        plt.title(f"Top 10 popular hashtags for {calendar.month_name[month]}", fontsize=24, fontweight="bold")
         plt.xlabel("Hashtags")
         plt.ylabel("Number of times shown in tweets")
         fig.tight_layout()
-        plt.savefig(f"top10_hashtags_month_{month}.jpg", format='jpg', dpi=500)
+        plt.savefig(f"top10_hashtags_month_{month}.pdf", format='pdf', dpi=300)
 
 
 def plot_other_hashtags():
@@ -36,7 +35,7 @@ def plot_other_hashtags():
         d = pd.read_csv(file, delimiter='\t', encoding='utf-8')
         d = d.sort_values(by="count", ascending=False)
 
-        patternDel = "(covid|coronavirus)+"
+        patternDel = "(covid|coronavirus|coronavírus)+"
         df = d[d['Hashtag'].str.contains(patternDel, flags=re.IGNORECASE) == False]
         hashtags = list(df.iloc[0:10]['Hashtag'])
         count = list(df.iloc[0:10]['count'])
@@ -47,11 +46,11 @@ def plot_other_hashtags():
         plt.xticks(fontname="MS Gothic")
         fig.autofmt_xdate()
         plt.ticklabel_format(style='plain', axis='y')
-        plt.title(f"Top 10 other hashtags for {calendar.month_name[month]}")
+        plt.title(f"Top 10 other hashtags for {calendar.month_name[month]}", fontsize=24, fontweight="bold")
         plt.xlabel("Hashtags")
         plt.ylabel("Number of times shown in tweets")
         fig.tight_layout()
-        plt.savefig(f"top10_other_hashtags_month_{month}.jpg", format='jpg', dpi=500)
+        plt.savefig(f"top10_other_hashtags_month_{month}.pdf", format='pdf', dpi=300)
 
 
 def plot_comparing_top_hts():
@@ -83,11 +82,13 @@ def plot_comparing_top_hts():
     fig = plt.figure()
     d.plot(kind='bar')
     plt.ticklabel_format(style='plain', axis='y')
-    plt.title("Monthly top hashtags volume")
+    plt.title("Monthly top hashtags volume", fontsize=24, fontweight="bold")
     plt.ylabel("Count")
     plt.xlabel("Month")
     fig.tight_layout()
-    plt.savefig("top_hashtags_comparison.jpg", format='jpg', dpi=500)
+    plt.yticks(fontname="MS Gothic")
+    plt.xticks(rotation=0)
+    plt.savefig("top_hashtags_comparison.pdf", format='pdf', dpi=300)
 
 
 def plot_noncovid_comparing_top_hts():
@@ -103,7 +104,7 @@ def plot_noncovid_comparing_top_hts():
     df = pd.DataFrame.from_dict(hashtags, orient='index', columns=["count"])
     df.reset_index(inplace=True)
     df = df.rename(columns={'index': 'Hashtag'})
-    patternDel = "(covid|coronavirus)+"
+    patternDel = "(covid|coronavirus|coronavírus|โควิด19)+"
     df = df[df['Hashtag'].str.contains(patternDel, flags=re.IGNORECASE) == False]
     df.set_index("Hashtag", inplace=True, drop=True)
 
@@ -125,18 +126,28 @@ def plot_noncovid_comparing_top_hts():
     fig = plt.figure()
     d.plot(kind='bar')
     plt.ticklabel_format(style='plain', axis='y')
-    plt.title("Monthly top hashtags volume")
+    plt.title("Monthly top hashtags volume", fontsize=24, fontweight="bold")
     plt.ylabel("Count")
     plt.xlabel("Month")
     fig.tight_layout()
-    plt.savefig("top_noncovid_hashtags_comparison.jpg", format='jpg', dpi=500)
+    plt.yticks(fontname="MS Gothic")
+    plt.xticks(rotation=0)
+    plt.savefig("top_noncovid_hashtags_comparison.pdf", format='pdf', dpi=300)
 
 
 def main():
-    plt.rcParams['figure.figsize'] = [19.20, 10.80]
-    plot_ht_by_month()
-    plot_other_hashtags()
-    plot_comparing_top_hts()
+    plt.rcParams.update({
+        'figure.figsize': [19.20, 10.80],
+        'font.size': 16,
+        'axes.labelsize': 22,
+        'legend.fontsize': 16,
+        'xtick.labelsize': 18,
+        'lines.linewidth': 2
+
+    })
+    # plot_ht_by_month()
+    # plot_other_hashtags()
+    # plot_comparing_top_hts()
     plot_noncovid_comparing_top_hts()
 
 

@@ -125,14 +125,14 @@ def maxlabel_user_to_user(db, date, label):
         text_list += f"\n{key[0]} -> {key[1]} [weight={value}]"
 
     text_list += "\n}"
-    file_susp = open(f"graph-{label}-2020-{start_date.month}-{start_date.day}.dot", "w+")
+    file_susp = open(f"/home/gnikou/dotgraphs/graph-{label}-2020-{start_date.month}-{start_date.day}.dot", "w+")
     file_susp.write(text_list)
     file_susp.close()
 
 
 def separate_susp_nonsusp(label, start_date):
     file_sentiment = f"/home/gnikou/sentiment_by_id/sentiment_by_id_day_2020-{start_date.month}-{start_date.day}.csv"
-    file_suspended = f"/home/gnikou/susp_texts/suspended_texts-{label}-2020-{start_date.month}-{start_date.day}.csv"
+    file_suspended = f"/home/gnikou/suspended_texts/suspended_texts-{label}-2020-{start_date.month}-{start_date.day}.csv"
     print(file_sentiment)
     print(file_suspended)
 
@@ -158,7 +158,7 @@ def separate_susp_nonsusp(label, start_date):
     df = df[df.idxmax(axis="columns") == label]
 
     all_tweet_ids = [int(i) for i in df.index]
-    df2 = pd.read_csv(file_suspended, sep='\t', quoting=csv.QUOTE_NONE, error_bad_lines=False)
+    df2 = pd.read_csv(file_suspended, sep='\t')
     suspended_tweet_ids = [int(i) for i in df2.id]
 
     non_suspended_tweet_ids = set(all_tweet_ids) - set(suspended_tweet_ids)

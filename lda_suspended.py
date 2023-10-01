@@ -1,24 +1,26 @@
+import collections
 import os
-import pandas as pd
+from pprint import pprint
+
 import gensim
-from matplotlib import pyplot as plt
-from nltk.corpus import stopwords
 import gensim.corpora as corpora
+import nltk
+import pandas as pd
+import pyLDAvis
+import pyLDAvis.gensim_models
+import pymongo
+from dateutil import parser
 from gensim.models import LdaModel
 from gensim.models.coherencemodel import CoherenceModel
-import pymongo
-from mongoConfig import mongoConfig
-import pyLDAvis
-from pprint import pprint
-import pyLDAvis.gensim_models
-import nltk
+from matplotlib import pyplot as plt
+from nltk.corpus import stopwords
 from nltk.corpus import wordnet as wn
-from dateutil import parser
-import collections
+
+from mongoConfig import mongoConfig
 
 
 def get_text(db, date, label):
-    file = f"/Storage/gnikou/sentiment_per_day/suspended_tweets_day_2020-{date.month}-{date.day}.csv"
+    file = f"/Storage/gnikou/suspended_sentiment_per_day/suspended_tweets_day_2020-{date.month}-{date.day}.csv"
     if os.path.exists(file) is False:
         print(f"File {file} isn't here ")
         return
@@ -29,14 +31,12 @@ def get_text(db, date, label):
         df = df[['tweet_id', 'positive for covid', 'positive for lockdown',
                  'positive for vaccine', 'positive for conspiracy',
                  'positive for masks', 'positive for cases',
-                 'positive for deaths', 'positive for propaganda',
-                 'positive for 5G']].copy()
+                 'positive for deaths', 'positive for propaganda']].copy()
     else:
         df = df[['tweet_id', 'negative for covid', 'negative for lockdown',
                  'negative for vaccine', 'negative for conspiracy',
                  'negative for masks', 'negative for cases',
-                 'negative for deaths', 'negative for propaganda',
-                 'negative for 5G']].copy()
+                 'negative for deaths', 'negative for propaganda']].copy()
 
     df.set_index("tweet_id", inplace=True, drop=True)
     df = df[df.idxmax(axis="columns") == label]
@@ -45,7 +45,7 @@ def get_text(db, date, label):
     text_dict = dict()
     for tweet_id in tweets_ids:
         for tweet in db.tweets.find({"id": tweet_id, "lang": "en"}, {"id": 1, "text": 1, "_id": 0}):
-            text = tweet['text'].replace('\n', '')
+            text = tweet['text'].replace('\r', ' ').replace('\n', ' ')
             text_dict[tweet['id']] = text
 
     df = pd.DataFrame.from_dict(text_dict, orient='index', columns=['text'])
@@ -55,8 +55,8 @@ def get_text(db, date, label):
     df.to_csv(file, index=False, sep='\t')
 
 
-def lda_susp(db, label, date):
-    file = f"/Storage/gnikou/suspended_texts/suspended_texts-{label}-2020-{parser.parse(date).month}-{parser.parse(date).day}.csv"
+def lda(db, label, date):
+    file = f"suspended_texts/suspended_texts-{label}-2020-{parser.parse(date).month}-{parser.parse(date).day}.csv"
     print(f"{label}\t{date}")
     stop_words = stopwords.words('english')
     stop_words.extend(['from', 'subject', 're', 'edu', 'use', 'https', '&amp', '&amp;'])
@@ -85,8 +85,6 @@ def lda_susp(db, label, date):
     results = pd.DataFrame(results, columns=['topic', 'score'])
 
     s = pd.Series(results.score.values, index=results.topic.values)
-    # s.plot()
-    # plt.show()
     num_topics = s.idxmax()
 
     print(f'The coherence score is highest with {num_topics} topics.')
@@ -102,74 +100,17 @@ def lda_susp(db, label, date):
     topics = lda_model.show_topics(formatted=False)
     text_to_write = extract_key_tweets(db, topics, df, data, texts, text_to_write)
     file_w = open(
-        f"/Storage/gnikou/prevalent_tweets_stats/susp_tweets_stats-{label}-2020-{parser.parse(date).month}-{parser.parse(date).day}.txt",
+        f"tweets_from_topics/tweets_from_topics-{label}-2020-{parser.parse(date).month}-{parser.parse(date).day}.txt",
         "w+")
     file_w.write(text_to_write)
     file_w.close()
 
-    # Compute Perplexity
-    print('\nPerplexity: ', lda_model.log_perplexity(corpus))  # a measure of how good the model is. lower the better.
-
     vis = pyLDAvis.gensim_models.prepare(lda_model, corpus, id2word)
     try:
-        pyLDAvis.save_html(vis, f"/Storage/gnikou/LDA_files/LDA-{label}-{date}.html")
+        pyLDAvis.save_html(vis, f"LDA_files/LDA-{label}-{date}.html")
     except:
         print("Saving failed")
     print_topics(num_topics, topics, label, date)
-
-
-'''
-def lda_susp2(db, label, date):
-    # file = f"/Storage/gnikou/sentiment_per_day/suspended_texts-{label}-2020-{parser.parse(date).month}-{parser.parse(date).day}.csv"
-    file = open("susp_texts.csv")
-    print(f"{label}\t{date}")
-    stop_words = stopwords.words('english')
-    stop_words.extend(['from', 'subject', 're', 'edu', 'use', 'https', '&amp', '&amp;'])
-
-    # print(d.size)
-    df = pd.read_csv(file, sep='\t', encoding='utf-8')
-
-    data = df.text.values.tolist()
-
-    texts = [clean(t) for t in data]
-    # print(texts[:1])
-
-    id2word = corpora.Dictionary(texts)
-
-    # Term Document Frequency
-    corpus = [id2word.doc2bow(text) for text in texts]
-
-    # View
-    # print([[(id2word[i], freq) for i, freq in cp] for cp in corpus[:1]])
-
-    results = []
-
-    for t in range(2, 31):
-        lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus, id2word=id2word, num_topics=t)
-        corpus_lda = lda_model[corpus]
-        cm = CoherenceModel(model=lda_model, corpus=corpus_lda, coherence='u_mass')
-        score = cm.get_coherence()
-        tup = t, score
-        results.append(tup)
-
-    results = pd.DataFrame(results, columns=['topic', 'score'])
-
-    s = pd.Series(results.score.values, index=results.topic.values)
-    # s.plot()
-    # plt.show()
-    num_topics = s.idxmax()
-
-    print(f'The coherence score is highest with {num_topics} topics.')
-
-    lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
-                                                id2word=id2word,
-                                                num_topics=num_topics,
-                                                passes=10,
-                                                per_word_topics=True,
-                                                minimum_probability=0)
-
-    pprint(lda_model.print_topics())
-'''
 
 
 def extract_key_tweets(db, topics, df, data, texts, text_to_write):
@@ -192,23 +133,22 @@ def extract_key_tweets(db, topics, df, data, texts, text_to_write):
         if dct2[i] < 5:
             del dct[i]
             del dct_topic[i]
-
-    for i in dct_topic.keys():
-        print(f"{i} Topic:{dct_topic[i]}")
-        text_to_write += f"{i} Topic:{dct_topic[i]}\n"
+    text_to_write += "Topic\tText\tTweetID\tUserID\tRetweets\tSuspended Retweets"
 
     if dct:
-        text_to_write = retweets_stats(db, dct, text_to_write)
+        text_to_write = retweets_stats(db, dct, text_to_write, dct_topic)
     return text_to_write
 
 
-def retweets_stats(db, dct, text_to_write):
-    file = "/Storage/gnikou/sentiment_per_day/tweets_from_suspended_users"  #
+def retweets_stats(db, dct, text_to_write, dct_topic):
+    file = "tweets_from_suspended_users.csv"  #
     df = pd.read_csv(file, header=None)
     susp_tweets_ids = set(int(i) for i in df[0].unique())
     tweets = dct.keys()
 
     for i in tweets:
+        print(f"{i} Topic:{dct_topic[i]}")
+        text_to_write += f""
         suspended_rts = 0
         non_susp_rts = 0
         tweet_id = int(dct[i])
@@ -231,21 +171,12 @@ def retweets_stats(db, dct, text_to_write):
         print(f"Total: {suspended_rts + non_susp_rts}")
         print(f"Suspended: {suspended_rts}")
         print(f"Non Suspended: {non_susp_rts}")
-
-        text_to_write += f"\n==========\nOriginal id: {original_id} Original author:{original_author}\nText: {i}" \
-                         f"\nTotal: {suspended_rts + non_susp_rts}\n" \
-                         f"Suspended: {suspended_rts}\nNon Suspended: {non_susp_rts}"
-
-        try:
-            print(f"Ratio: {suspended_rts / (suspended_rts + non_susp_rts)}\n")
-            text_to_write += f"\nRatio: {suspended_rts / (suspended_rts + non_susp_rts)}"
-        except ZeroDivisionError:
-            pass
+        text_to_write += f"\n{dct_topic[i]}\t{i}\t{original_id}\t{original_author}\t{suspended_rts + non_susp_rts}\t{suspended_rts}"
 
     return text_to_write
 
 
-def print_topics(num_topics, t, label, date):
+def print_topics(num_topics, topics, label, date):
     if num_topics < 3:
         nrows = 1
         ncols = 2
@@ -267,7 +198,7 @@ def print_topics(num_topics, t, label, date):
 
     fig, ax = plt.subplots()
 
-    for item in t:
+    for item in topics:
         d = dict(item[1])
         names = list(d.keys())
         names.reverse()
@@ -277,11 +208,12 @@ def print_topics(num_topics, t, label, date):
         plt.subplot(nrows, ncols, item[0] + 1)
         ax.set_xticks([])  # values
         ax.set_xticklabels([])  # labels
-        plt.title(f"most significant words for topic {item[0] + 1}")
+        plt.title(f"Most significant words for topic {item[0]}")
         plt.xlabel('Score')
         plt.barh(names, values, tick_label=names)
-
-    plt.savefig(f"/Storage/gnikou/LDA_files/LDA-{label}-{date}.jpg", format='jpg', dpi=500)
+        fig.suptitle(f"LDA on label {label} at day {date}", fontsize=18, fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(f"LDA_files/LDA-{label}-{date}.pdf", format='pdf', dpi=300)
 
 
 def clean(text):
@@ -304,20 +236,26 @@ def remove_stop_words(tokens):
 
 
 def get_outliers(label="positive for covid"):
-    file = "/Storage/gnikou/sentiment_per_day/suspended_twitter_covid_sentiment.csv"  #
+    file = "suspended_twitter_covid_sentiment.csv"  #
     df = pd.read_csv(file, sep='\t', index_col=False)
-    q = df[label].quantile(0.97)
+    q = df[label].quantile(0.98)
     d = df[df[label] > q]
     print(d)
     return d['day'].values.flatten().tolist()
 
 
 def main():
-    plt.rcParams['figure.figsize'] = [19.20, 10.80]
+    plt.rcParams.update({
+        'figure.figsize': [19.20, 10.80],
+        'font.size': 16,
+        'axes.labelsize': 18,
+        'legend.fontsize': 12,
+        'lines.linewidth': 2
+    })
+
     client = pymongo.MongoClient(mongoConfig["address"])
     db = client[mongoConfig["db"]]
-    labels_list = ['positive_for_covid', 'positive_for_conspiracy', 'positive_for_cases', 'negative_for_conspiracy',
-                   'positive_for_lockdown', 'positive_for_vaccine', 'positive_for_conspiracy',
+    labels_list = ['positive_for_covid', 'positive_for_lockdown', 'positive_for_vaccine', 'positive_for_conspiracy',
                    'positive_for_masks', 'positive_for_cases', 'positive_for_deaths', 'positive_for_propaganda',
                    'positive_for_5G', 'negative_for_covid', 'negative_for_lockdown', 'negative_for_vaccine',
                    'negative_for_conspiracy', 'negative_for_masks', 'negative_for_cases', 'negative_for_deaths',
@@ -328,7 +266,7 @@ def main():
         days = get_outliers(label)
         for date in days:
             get_text(db, parser.parse(date), label.replace("_", " "))
-            lda_susp(db, label, date)
+            lda(db, label, date)
 
 
 if __name__ == '__main__':
